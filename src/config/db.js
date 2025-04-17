@@ -1,11 +1,13 @@
-const mysql = require('mysql2');
-require('dotenv').config(); // Load .env variables
+import mysql from 'mysql2';
+import dotenv from 'dotenv';
+
+dotenv.config(); // Load .env variables
 
 const pool = mysql.createPool({
   host: "localhost",
   user: "root",
-  password: "password",
-  database: "laondb",
+  password: "",
+  database: "loandb",
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0
@@ -20,4 +22,5 @@ pool.getConnection((err, connection) => {
   }
 });
 
-module.exports = pool.promise();
+// Export the pool as the default export
+export default pool.promise();

@@ -1,16 +1,21 @@
-const db = require('../config/db');
+import db from '../config/db.js';
 
-class User {
-  static async createUser(username, mailID, role, password, phoneno) {
-    const query = `INSERT INTO users (username, mailID, role, password, phoneno) VALUES (?, ?, ?, ?, ?)`;
-    return db.execute(query, [username, mailID, role, password, phoneno]);
-  }
+const createUser = async (username, mailID, role, password, phoneno) => {
+  const query = `INSERT INTO users (username, mailID, role, password, phoneno) VALUES (?, ?, ?, ?, ?)`;
+  return db.execute(query, [username, mailID, role, password, phoneno]);
+};
 
-  static async findUserByEmail(mailID) {
-    const query = `SELECT * FROM users WHERE mailID = ?`;
-    const [rows] = await db.execute(query, [mailID]);
-    return rows.length > 0 ? rows[0] : null;
-  }
-}
+const findUserByEmail = async (mailID) => {
+  const query = `SELECT * FROM users WHERE mailID = ?`;
+  const [rows] = await db.execute(query, [mailID]);
+  
+  // Log the rows to check if data is returned correctly
+  console.log("Rows fetched from DB:", rows);
+  
+  return rows.length > 0 ? rows[0] : null;
+};
+  
 
-module.exports = User;
+// Named exports
+const User = { createUser, findUserByEmail };
+export default User;
