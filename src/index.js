@@ -3,6 +3,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import userRoutes from './routes/UserRoutes.js';
 import loanRoutes from './routes/LoanRoutes.js';
+import DashboardRoutes from './routes/DashboardRoutes.js';
 
 dotenv.config();
 
@@ -14,6 +15,7 @@ app.use(express.json());
 
 app.use('/api/users', userRoutes);
 app.use('/api/loans', loanRoutes);
+app.use('/api', DashboardRoutes);
 
 app.get('/', (req, res) => {
   res.send('Welcome to Loan Application and Verification System');

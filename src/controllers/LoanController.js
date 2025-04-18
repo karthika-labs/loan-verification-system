@@ -34,6 +34,57 @@ const applyLoan = async (req, res) => {
   }
 };
 
-export default { applyLoan };
+const getAllLoans = async (req, res) => {
+  try {
+    const loans = await LoanService.getAllLoans();
+    res.status(200).json(loans);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+const getLoanById = async (req, res) => {
+  const { id } = req.params;
+  try {
+    const loan = await LoanService.getLoanById(id);
+    if (!loan) {
+      return res.status(404).json({ error: "Loan application not found" });
+    }
+    res.status(200).json(loan);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+const updateLoanApproval = async (req, res) => {
+  try {
+    const loanID = req.params.id;
+    const { status, remark } = req.body;
+
+    if (!status) {
+      return res.status(400).json({ error: "Approval status is required" });
+    }
+
+    const result = await LoanService.updateApprovalStatus(loanID, status, remark);
+    res.status(200).json({ message: "Loan approval updated successfully", ...result });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+const getLoanApplicationStatusByID = async(req , res) =>{
+  const { id } = req.params;
+  try {
+    const loan_approval = await LoanService.getLoanApplStatusById(id);
+    if (!loan_approval) {
+      return res.status(404).json({ error: "Loan application status not found" });
+    }
+    res.status(200).json(loan_approval);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+}
+
+export default { applyLoan, getAllLoans, getLoanById, updateLoanApproval,getLoanApplicationStatusByID };
 
 

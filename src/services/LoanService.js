@@ -45,4 +45,69 @@ const applyLoan = async (loanDetails) => {
   }
 };
 
-export default { applyLoan };
+const getAllLoans = async () => {
+  const query = `
+    SELECT 
+      l.*, a.loanApprovalid, a.status AS approvalStatus, a.remark 
+    FROM 
+      loanapplication l 
+    JOIN 
+      loan_approval a 
+    ON 
+      l.loanApplicationID = a.loanApplicationID
+  `;
+
+  try {
+    const [rows] = await db.execute(query);
+    return rows;
+  } catch (error) {
+    throw new Error("Error fetching loan applications: " + error.message);
+  }
+};
+
+const getLoanById = async (id) => {
+  const query = `
+    SELECT l.*, a.status, a.remark
+    FROM loanapplication l
+    JOIN loan_approval a ON l.loanApplicationID = a.loanApplicationid
+    WHERE l.loanApplicationID = ?
+  `;
+  const [rows] = await db.execute(query, [id]);
+  return rows.length ? rows[0] : null;
+};
+
+
+
+
+const updateApprovalStatus = async (loanApplicationID, status, remark = null) => {
+  const query = `
+    UPDATE loan_approval
+    SET status = ?, remark = ?
+    WHERE loanApplicationid = ?
+  `;
+
+  try {
+    const [result] = await db.execute(query, [status, remark, loanApplicationID]);
+
+    if (result.affectedRows === 0) {
+      throw new Error("Loan approval record not found for the provided loan ID.");
+    }
+
+    return { loanApplicationID, status, remark };
+  } catch (error) {
+    throw new Error("Error updating loan approval: " + error.message);
+  }
+};
+
+const getLoanApplStatusById = async (id) => {
+  const query = `
+    SELECT *
+    FROM loan_approval l
+    WHERE l.loanApplicationID = ?
+  `;
+  const [rows] = await db.execute(query, [id]);
+  return rows.length ? rows[0] : null;
+};
+
+
+export default { applyLoan, getAllLoans , getLoanById, updateApprovalStatus, getLoanApplStatusById};
