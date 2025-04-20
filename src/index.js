@@ -5,11 +5,23 @@ import userRoutes from './routes/UserRoutes.js';
 import loanRoutes from './routes/LoanRoutes.js';
 import DashboardRoutes from './routes/DashboardRoutes.js';
 
+
+
+
+
+// CORS configuration
+const corsOptions = {
+  origin: 'http://localhost:5173',  // Replace with your front-end URL
+  credentials: true,                // Allow credentials (cookies, authorization headers, etc.)
+};
+
+
+
 dotenv.config();
 
 const app = express();
-
-app.use(cors());
+app.use(cors(corsOptions));
+//app.use(cors());
 app.use(express.json());
 //app.use(bodyParser.json());
 

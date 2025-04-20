@@ -5,7 +5,7 @@ export const getDashboardStats = async (req, res) => {
     try {
         const role = req.user?.role;
 
-        if (role !== 'manager' && role !== 'admin') {
+        if (role !== 'loan_authority' && role !== 'admin') {
             return res.status(403).json({ message: 'Access denied: Manager or Admin only' });
         }
 

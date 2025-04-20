@@ -79,6 +79,8 @@ const getLoanById = async (id) => {
 
 
 
+
+
 const updateApprovalStatus = async (loanApplicationID, status, remark = null) => {
   const query = `
     UPDATE loan_approval
@@ -109,5 +111,20 @@ const getLoanApplStatusById = async (id) => {
   return rows.length ? rows[0] : null;
 };
 
+const getLoansByUserID = async (userid) => {
+  const query = `
+    SELECT * 
+    FROM loanapplication l
+    JOIN loan_approval a ON l.loanApplicationID = a.loanApplicationid
+    WHERE l.userid = ?
+  `;
+  try {
+    const [rows] = await db.execute(query, [userid]);
+    return rows;
+  } catch (error) {
+    throw new Error("Error fetching loans for user: " + error.message);
+  }
+};
 
-export default { applyLoan, getAllLoans , getLoanById, updateApprovalStatus, getLoanApplStatusById};
+
+export default { applyLoan, getAllLoans , getLoanById, updateApprovalStatus, getLoanApplStatusById, getLoansByUserID};

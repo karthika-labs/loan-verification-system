@@ -85,6 +85,23 @@ const getLoanApplicationStatusByID = async(req , res) =>{
   }
 }
 
-export default { applyLoan, getAllLoans, getLoanById, updateLoanApproval,getLoanApplicationStatusByID };
+const getLoansByUserID = async (req, res) => {
+  const { userid } = req.params;  // Get userID from the request params
+  
+  try {
+    // Fetch loans for the user
+    const loans = await LoanService.getLoansByUserID(userid);
+    
+    if (!loans || loans.length === 0) {
+      return res.status(404).json({ error: "No loan applications found for this user." });
+    }
+
+    res.status(200).json(loans);  // Return the list of loans
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+export default { applyLoan, getAllLoans, getLoanById, updateLoanApproval,getLoanApplicationStatusByID,getLoansByUserID };
 
 
