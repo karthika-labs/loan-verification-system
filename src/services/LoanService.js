@@ -1,6 +1,6 @@
 import db from '../config/db.js'; // Assuming db.js handles your database connection
 
-const applyLoan = async (loanDetails) => {
+export const applyLoan = async (loanDetails) => {
   const {
     userid, applicantDOB, gender, annualIncome, occupation,
     loanAmount, firstName, lastName, aadharNo, panNo, tenure, address,
@@ -9,39 +9,59 @@ const applyLoan = async (loanDetails) => {
     emergency_contact_num, existing_loan, collateral_details
   } = loanDetails;
 
-  const insertLoanQuery = `
-    INSERT INTO loanapplication (
+  try {
+    // 1. Check if user already has a pending loan
+    const [pendingRows] = await db.execute(`
+      SELECT a.status FROM loanapplication l
+      JOIN loan_approval a ON l.loanApplicationID = a.loanApplicationID
+      WHERE l.userid = ? AND a.status = 'Pending'
+    `, [userid]);
+
+    if (pendingRows.length > 0) {
+      return { success: false, code: 400, message: "You already have a pending loan application."};
+    }
+
+    // 2. Check for duplicate Aadhar or PAN in existing applications
+    const [duplicateRows] = await db.execute(`
+      SELECT loanApplicationID FROM loanapplication
+      WHERE aadharNo = ? OR panNo = ?
+    `, [aadharNo, panNo]);
+
+    if (duplicateRows.length > 0) {
+      return { success: false, code: 400, message: "Loan already applied with same Aadhar or PAN number." };
+    }
+
+    // 3. Insert into loanapplication table
+    const insertLoanQuery = `
+      INSERT INTO loanapplication (
+        userid, applicantDOB, gender, annualIncome, occupation,
+        loanAmount, firstName, lastName, aadharNo, panNo, tenure, address,
+        mobNo, alternateMobileNo, email, emrContactName, emrContactNum,
+        marital_status, pBank_Name, ifsc_code, emergency_contact_name,
+        emergency_contact_num, existing_loan, collateral_details
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `;
+
+    const values = [
       userid, applicantDOB, gender, annualIncome, occupation,
       loanAmount, firstName, lastName, aadharNo, panNo, tenure, address,
       mobNo, alternateMobileNo, email, emrContactName, emrContactNum,
       marital_status, pBank_Name, ifsc_code, emergency_contact_name,
       emergency_contact_num, existing_loan, collateral_details
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `;
+    ];
 
-  const values = [
-    userid, applicantDOB, gender, annualIncome, occupation,
-    loanAmount, firstName, lastName, aadharNo, panNo, tenure, address,
-    mobNo, alternateMobileNo, email, emrContactName, emrContactNum,
-    marital_status, pBank_Name, ifsc_code, emergency_contact_name,
-    emergency_contact_num, existing_loan, collateral_details
-  ];
-
-  try {
-    // Insert into loanapplication
     const [loanResult] = await db.execute(insertLoanQuery, values);
     const loanApplicationID = loanResult.insertId;
 
-    // Insert into loan_approval table
-    const insertApprovalQuery = `INSERT INTO loan_approval (loanApplicationID) VALUES (?)`;
-    await db.execute(insertApprovalQuery, [loanApplicationID]);
+    // 4. Insert into loan_approval
+    await db.execute(`
+      INSERT INTO loan_approval (loanApplicationID) VALUES (?)
+    `, [loanApplicationID]);
 
-    return {
-      message: "Loan application submitted successfully",
-      loanApplicationID
-    };
+    return { success: true, code: 201, message: "Loan application submitted successfully!"};
+
   } catch (error) {
-    throw new Error("Error applying for loan: " + error.message);
+    throw new Error('Error applying for loan: ' + error.message);
   }
 };
 
