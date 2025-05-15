@@ -7,7 +7,7 @@ const applyLoan = async (req, res) => {
       loanAmount, firstName, lastName, aadharNo, panNo, tenure, address,
       mobNo, alternateMobileNo, email, emrContactName, emrContactNum,
       marital_status, pBank_Name, ifsc_code, emergency_contact_name,
-      emergency_contact_num, existing_loan, collateral_details
+      emergency_contact_num, existing_loan, collateral_details, documentID // Correct naming
     } = req.body;
 
     // Define an array of required fields
@@ -15,24 +15,39 @@ const applyLoan = async (req, res) => {
       'userid', 'applicantDOB', 'gender', 'annualIncome', 'occupation',
       'loanAmount', 'firstName', 'lastName', 'aadharNo', 'panNo', 'tenure', 'address',
       'mobNo', 'email', 'emrContactName', 'emrContactNum', 'marital_status', 'pBank_Name',
-      'ifsc_code', 'emergency_contact_name', 'emergency_contact_num', 'existing_loan'
+      'ifsc_code', 'emergency_contact_name', 'emergency_contact_num', 'existing_loan', 'documentID' // Ensure all fields are validated
     ];
 
     // Create an array to store missing fields
     const missingFields = requiredFields.filter(field => !req.body[field]);
-
-    // If any required fields are missing, return a response with the missing fields
     if (missingFields.length > 0) {
       return res.status(400).json({ error: `Missing required fields: ${missingFields.join(', ')}` });
     }
 
     // If validation passes, proceed with applying loan
-    const response = await LoanService.applyLoan(req.body);
+    const response = await LoanService.applyLoan({ ...req.body, documentID }); // Ensure documentID is passed
     res.status(201).json(response);
   } catch (error) {
     res.status(400).json({ error: error.message });
   }
 };
+
+const uploadDocument = async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: "No document uploaded" });
+    }
+
+    const documentName = req.file.originalname;
+    const documentPath = req.file.path;
+
+    const documentID = await LoanService.storeDocument(documentName, documentPath);
+    res.status(201).json({ documentID });
+  } catch (error) {
+    res.status(500).json({ error: "Error uploading document: " + error.message });
+  }
+};
+
 
 const getAllLoans = async (req, res) => {
   try {
@@ -102,6 +117,22 @@ const getLoansByUserID = async (req, res) => {
   }
 };
 
-export default { applyLoan, getAllLoans, getLoanById, updateLoanApproval,getLoanApplicationStatusByID,getLoansByUserID };
+export const getDocumentByLoanApplicationID = async (req, res) => {
+  try {
+    const { loanApplicationID } = req.params; // Extract loan application ID from params
+    const document = await LoanService.getDocumentByAppID(loanApplicationID);
+
+    if (!document) {
+      return res.status(404).json({ error: 'Document not found for the provided Loan Application ID' });
+    }
+
+    res.status(200).json(document);
+  } catch (error) {
+    res.status(500).json({ error: `Error fetching document: ${error.message}` });
+  }
+};
+
+
+export default { applyLoan, getAllLoans, getLoanById, updateLoanApproval,getLoanApplicationStatusByID,getLoansByUserID, uploadDocument, getDocumentByLoanApplicationID };
 
 

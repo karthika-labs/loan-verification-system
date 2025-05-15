@@ -4,6 +4,9 @@ import dotenv from 'dotenv';
 import userRoutes from './routes/UserRoutes.js';
 import loanRoutes from './routes/LoanRoutes.js';
 import DashboardRoutes from './routes/DashboardRoutes.js';
+import path from 'path'; // Import the path module
+import { fileURLToPath } from 'url';
+
 
 
 
@@ -28,6 +31,12 @@ app.use(express.json());
 app.use('/api/users', userRoutes);
 app.use('/api/loans', loanRoutes);
 app.use('/api', DashboardRoutes);
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+const uploadsDir = "const uploadsDir = '/Users/gowtham-tt0586/Documents/CSG DOCS/Karthika/loan-app-versys-backend/loan-verification-system/uploads";
+// Ensure this Express setup is aligned properly
+app.use('/uploads', express.static('/Users/gowtham-tt0586/Documents/CSG DOCS/Karthika/loan-app-versys-backend/loan-verification-system/uploads'));
 
 app.get('/', (req, res) => {
   res.send('Welcome to Loan Application and Verification System');

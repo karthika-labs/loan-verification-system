@@ -1,12 +1,21 @@
 import db from '../config/db.js'; // Assuming db.js handles your database connection
 
+export const storeDocument = async (documentName, documentPath) => {
+  try {
+    const [result] = await db.execute(`INSERT INTO loan_documents (documentName, documentPath) VALUES (?, ?)`, [documentName, documentPath]);
+    return result.insertId;
+  } catch (error) {
+    throw new Error('Error storing document: ' + error.message);
+  }
+};
+
 export const applyLoan = async (loanDetails) => {
   const {
     userid, applicantDOB, gender, annualIncome, occupation,
     loanAmount, firstName, lastName, aadharNo, panNo, tenure, address,
     mobNo, alternateMobileNo, email, emrContactName, emrContactNum,
     marital_status, pBank_Name, ifsc_code, emergency_contact_name,
-    emergency_contact_num, existing_loan, collateral_details
+    emergency_contact_num, existing_loan, collateral_details, documentID
   } = loanDetails;
 
   try {
@@ -58,12 +67,16 @@ export const applyLoan = async (loanDetails) => {
       INSERT INTO loan_approval (loanApplicationID) VALUES (?)
     `, [loanApplicationID]);
 
+    await db.execute(`UPDATE loan_documents SET loanApplicationID = ? WHERE documentID = ?`, [loanApplicationID, documentID]);
+
     return { success: true, code: 201, message: "Loan application submitted successfully!"};
 
   } catch (error) {
     throw new Error('Error applying for loan: ' + error.message);
   }
 };
+
+
 
 const getAllLoans = async () => {
   const query = `
@@ -146,5 +159,19 @@ const getLoansByUserID = async (userid) => {
   }
 };
 
+export const getDocumentByAppID = async (loanApplicationID) => {
+  try {
+    const [rows] = await db.execute(`
+      SELECT documentID, documentName, documentPath, uploaded_at 
+      FROM loan_documents 
+      WHERE loanApplicationID = ?
+    `, [loanApplicationID]);
 
-export default { applyLoan, getAllLoans , getLoanById, updateApprovalStatus, getLoanApplStatusById, getLoansByUserID};
+    return rows[0]; // Assuming one document per loan application
+  } catch (error) {
+    throw new Error(`Database query failed: ${error.message}`);
+  }
+};
+
+
+export default { applyLoan, getAllLoans , getLoanById, updateApprovalStatus, getLoanApplStatusById, getLoansByUserID, storeDocument, getDocumentByAppID};
