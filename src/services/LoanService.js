@@ -21,26 +21,36 @@ export const applyLoan = async (loanDetails) => {
   try {
     // 1. Check if user already has a pending loan
     const [pendingRows] = await db.execute(`
-      SELECT a.status FROM loanapplication l
+      SELECT a.status 
+      FROM loanapplication l
       JOIN loan_approval a ON l.loanApplicationID = a.loanApplicationID
       WHERE l.userid = ? AND a.status = 'Pending'
     `, [userid]);
 
     if (pendingRows.length > 0) {
-      return { success: false, code: 400, message: "You already have a pending loan application."};
+      return {
+        success: false,
+        code: 400,
+        message: "You already have a pending loan application."
+      };
     }
 
-    // 2. Check for duplicate Aadhar or PAN in existing applications
+    // 2. Check for duplicate Aadhar or PAN in existing applications, excluding the user's own applications
     const [duplicateRows] = await db.execute(`
-      SELECT loanApplicationID FROM loanapplication
-      WHERE aadharNo = ? OR panNo = ?
-    `, [aadharNo, panNo]);
+      SELECT loanApplicationID 
+      FROM loanapplication
+      WHERE (aadharNo = ? OR panNo = ?) AND userid != ?
+    `, [aadharNo, panNo, userid]);
 
     if (duplicateRows.length > 0) {
-      return { success: false, code: 400, message: "Loan already applied with same Aadhar or PAN number." };
+      return {
+        success: false,
+        code: 400,
+        message: "Loan already applied with same Aadhar or PAN number."
+      };
     }
 
-    // 3. Insert into loanapplication table
+    // 3. Insert into the loanapplication table
     const insertLoanQuery = `
       INSERT INTO loanapplication (
         userid, applicantDOB, gender, annualIncome, occupation,
@@ -67,16 +77,19 @@ export const applyLoan = async (loanDetails) => {
       INSERT INTO loan_approval (loanApplicationID) VALUES (?)
     `, [loanApplicationID]);
 
-    await db.execute(`UPDATE loan_documents SET loanApplicationID = ? WHERE documentID = ?`, [loanApplicationID, documentID]);
+    await db.execute(`
+      UPDATE loan_documents SET loanApplicationID = ? WHERE documentID = ?
+    `, [loanApplicationID, documentID]);
 
-    return { success: true, code: 201, message: "Loan application submitted successfully!"};
-
+    return {
+      success: true,
+      code: 201,
+      message: "Loan application submitted successfully!"
+    };
   } catch (error) {
     throw new Error('Error applying for loan: ' + error.message);
   }
 };
-
-
 
 const getAllLoans = async () => {
   const query = `
