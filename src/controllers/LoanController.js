@@ -1,5 +1,15 @@
 import LoanService from '../services/LoanService.js';
 
+import { promises as fs } from 'fs'; // ✅ for async file reading
+import md5 from 'md5';               // ✅ if still using for some parts
+import { createHash } from 'crypto'; // ✅ for Node's built-in hashing
+import crypto from 'crypto';
+
+
+
+
+
+
 const applyLoan = async (req, res) => {
   try {
     const {
@@ -40,13 +50,57 @@ const uploadDocument = async (req, res) => {
 
     const documentName = req.file.originalname;
     const documentPath = req.file.path;
+    // Calculate MD5 hash of the document
+    const fileBuffer = await fs.readFile(documentPath);
+    const fileHash = md5(fileBuffer);
 
-    const documentID = await LoanService.storeDocument(documentName, documentPath);
+    const documentID = await LoanService.storeDocument(documentName, documentPath, fileHash);
     res.status(201).json({ documentID });
   } catch (error) {
     res.status(500).json({ error: "Error uploading document: " + error.message });
   }
 };
+
+const verifyDocumentAuthenticity = async (req, res) => {
+  try {
+    const { loanApplicationID } = req.params;
+
+    const documentDetails = await LoanService.getDocumentByAppID(loanApplicationID);
+    if (!documentDetails) {
+      return res.status(404).json({ error: "Document not found." });
+    }
+
+    const { documentPath, documentID } = documentDetails;
+    const fileBuffer = await fs.readFile(documentPath);
+    const currentHash = crypto.createHash('md5').update(fileBuffer).digest('hex');
+
+    // Check if this hash is used by a different user
+    const usedByAnother = await LoanService.isDocumentUsedByOtherUser(loanApplicationID, currentHash);
+
+    const verificationStatus = usedByAnother
+      ? "Document mismatch or forged"
+      : "Document is Authentic";
+    if(usedByAnother){
+      return res.status(409).json({
+      loanApplicationID,
+      documentID,
+      verificationStatus
+    });
+    }
+    else{
+      return res.status(200).json({
+      loanApplicationID,
+      documentID,
+      verificationStatus
+    });
+    }
+    
+  } catch (error) {
+    console.error("Verification error:", error);
+    return res.status(500).json({ error: "Error verifying document: " + error.message });
+  }
+};
+
 
 
 const getAllLoans = async (req, res) => {
@@ -133,6 +187,6 @@ export const getDocumentByLoanApplicationID = async (req, res) => {
 };
 
 
-export default { applyLoan, getAllLoans, getLoanById, updateLoanApproval,getLoanApplicationStatusByID,getLoansByUserID, uploadDocument, getDocumentByLoanApplicationID };
+export default { applyLoan, getAllLoans, getLoanById, updateLoanApproval,getLoanApplicationStatusByID,getLoansByUserID, uploadDocument, getDocumentByLoanApplicationID, verifyDocumentAuthenticity };
 
 

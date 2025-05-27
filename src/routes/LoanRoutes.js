@@ -47,6 +47,9 @@ router.post('/uploadDocument', authenticateToken, authorizeRoles('applicant'),
   LoanController.uploadDocument
 );
 
+router.get('/:loanApplicationID/document/verify', authenticateToken, LoanController.verifyDocumentAuthenticity);
+
+
 // AllowedRole="admin,loan_authority"
 router.get('/', authenticateToken, authorizeRoles('admin', 'loan_authority'), LoanController.getAllLoans);
 

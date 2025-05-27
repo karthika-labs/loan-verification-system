@@ -1,8 +1,8 @@
 import db from '../config/db.js'; // Assuming db.js handles your database connection
 
-export const storeDocument = async (documentName, documentPath) => {
+export const storeDocument = async (documentName, documentPath, MD5Hash) => {
   try {
-    const [result] = await db.execute(`INSERT INTO loan_documents (documentName, documentPath) VALUES (?, ?)`, [documentName, documentPath]);
+    const [result] = await db.execute(`INSERT INTO loan_documents (documentName, documentPath, MD5Hash) VALUES (?, ?, ?)`, [documentName, documentPath, MD5Hash]);
     return result.insertId;
   } catch (error) {
     throw new Error('Error storing document: ' + error.message);
@@ -186,5 +186,52 @@ export const getDocumentByAppID = async (loanApplicationID) => {
   }
 };
 
+export const verifyDocumentAuthenticity = async (loanApplicationID) => {
+  try {
+    // Get hash of current document
+    const [currentDocRows] = await db.execute(
+      `SELECT documentID, documentPath, MD5Hash FROM loan_documents WHERE loanApplicationID = ?`,
+      [loanApplicationID]
+    );
 
-export default { applyLoan, getAllLoans , getLoanById, updateApprovalStatus, getLoanApplStatusById, getLoansByUserID, storeDocument, getDocumentByAppID};
+    if (currentDocRows.length === 0) {
+      return { found: false };
+    }
+
+    const current = currentDocRows[0];
+
+    // Get hashes of other documents
+    const [otherDocs] = await db.execute(
+      `SELECT documentID, MD5Hash FROM loan_documents WHERE loanApplicationID != ?`,
+      [loanApplicationID]
+    );
+
+    return {
+      found: true,
+      currentDoc: current,
+      otherDocHashes: otherDocs.map(d => d.MD5Hash)
+    };
+  } catch (error) {
+    throw new Error("Error during authenticity check: " + error.message);
+  }
+};
+
+export const isDocumentUsedByOtherUser = async (loanApplicationID, currentHash) => {
+  const query = `
+    SELECT ld.documentID
+    FROM loan_documents ld
+    JOIN loanapplication la ON ld.loanApplicationID = la.loanApplicationID
+    WHERE ld.MD5Hash = ? AND ld.loanApplicationID != ?
+      AND la.userid != (
+        SELECT userid FROM loanapplication WHERE loanApplicationID = ?
+      )
+  `;
+
+  const [rows] = await db.execute(query, [currentHash, loanApplicationID, loanApplicationID]);
+  return rows.length > 0; // true if used by another user
+};
+
+
+
+
+export default { applyLoan, getAllLoans , getLoanById, updateApprovalStatus, getLoanApplStatusById, getLoansByUserID, storeDocument, getDocumentByAppID, verifyDocumentAuthenticity, isDocumentUsedByOtherUser};
